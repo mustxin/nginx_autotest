@@ -1,0 +1,113 @@
+# location测试数据
+# 格式：用例ID: {测试目的, 前置条件, 配置内容, 操作命令, 预期结果}
+
+location_001:
+  test_purpose: 验证基础功能-精确匹配location
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    location = /exact {
+      return 200 "Exact Location";
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl http://localhost/exact"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "Exact Location"
+
+location_002:
+  test_purpose: 验证基础功能-前缀匹配location
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    location /prefix {
+      return 200 "Prefix Match";
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl http://localhost/prefix/path"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "Prefix Match"
+
+location_003:
+  test_purpose: 验证基础功能-正则匹配location
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    location ~ \.(gif|jpg|png)$ {
+      return 200 "Image Regex Match";
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl http://localhost/test.png"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "Image Regex Match"
+
+location_004:
+  test_purpose: 验证基础功能-不区分大小写正则匹配
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    location ~* \.(jpg|jpeg|png|gif)$ {
+      return 200 "Case Insensitive Regex";
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl http://localhost/test.JPG"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "Case Insensitive Regex"
+
+location_005:
+  test_purpose: 验证基础功能-优先匹配location ^~
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    location ^~ /static {
+      return 200 "Prefix Priority Match";
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl http://localhost/static/file.txt"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "Prefix Priority Match"
+
+location_006:
+  test_purpose: 验证边界条件-嵌套location
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    location /api {
+      location /api/v1 {
+        return 200 "API V1";
+      }
+      return 200 "API Root";
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl http://localhost/api/v1"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "API V1"

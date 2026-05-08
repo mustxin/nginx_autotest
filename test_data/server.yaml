@@ -1,0 +1,93 @@
+# server块测试数据
+# 格式：用例ID: {测试目的, 前置条件, 配置内容, 操作命令, 预期结果}
+
+server_001:
+  test_purpose: 验证基础功能-基本server块配置
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+    - 80端口未被占用
+  config_content: |
+    server {
+      listen 80;
+      server_name localhost;
+      location / {
+        return 200 "OK";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl http://localhost/"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "OK"
+
+server_002:
+  test_purpose: 验证基础功能-多端口监听
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+    - 8080端口未被占用
+  config_content: |
+    server {
+      listen 8080;
+      server_name localhost;
+      location / {
+        return 200 "Port 8080 OK";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+
+server_003:
+  test_purpose: 验证基础功能-server块中包含location
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    server {
+      listen 80;
+      server_name test.local;
+      location /api {
+        return 200 "API OK";
+      }
+      location /health {
+        return 200 "Healthy";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl -H \"Host: test.local\" http://localhost/api"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "API OK"
+
+server_004:
+  test_purpose: 验证边界条件-server块中的root指令
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+    - 网站根目录存在
+  config_content: |
+    server {
+      listen 80;
+      server_name localhost;
+      root /var/www/html;
+      location / {
+        index index.html;
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+  expected_result:
+    - "configuration file"
+    - "test is successful"

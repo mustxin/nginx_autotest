@@ -1,0 +1,75 @@
+# grpc_set_header模块测试数据
+# 格式：用例ID: {测试目的, 前置条件, 配置内容, 操作命令, 预期结果}
+
+grpc_set_header_001:
+  test_purpose: 验证基础功能-gRPC添加自定义请求头
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+    - Nginx支持gRPC模块
+  config_content: |
+    location /grpc_test_add {
+      grpc_pass grpc://127.0.0.1:8080;
+      grpc_set_header X-Grpc-Test "grpc_value";
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+
+grpc_set_header_002:
+  test_purpose: 验证基础功能-gRPC修改Host请求头
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+    - Nginx支持gRPC模块
+  config_content: |
+    location /grpc_test_host {
+      grpc_pass grpc://127.0.0.1:8080;
+      grpc_set_header Host "grpc.host.com";
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+
+grpc_set_header_003:
+  test_purpose: 验证基础功能-gRPC使用变量设置请求头
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+    - Nginx支持gRPC模块
+  config_content: |
+    location /grpc_test_variable {
+      grpc_pass grpc://127.0.0.1:8080;
+      grpc_set_header X-Real-IP $remote_addr;
+      grpc_set_header X-Request-ID $request_id;
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+
+grpc_set_header_004:
+  test_purpose: 验证边界条件-gRPC空值请求头
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+    - Nginx支持gRPC模块
+  config_content: |
+    location /grpc_test_empty {
+      grpc_pass grpc://127.0.0.1:8080;
+      grpc_set_header X-Empty-Grpc "";
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+  expected_result:
+    - "configuration file"
+    - "test is successful"

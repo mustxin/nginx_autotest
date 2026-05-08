@@ -1,0 +1,111 @@
+# server_name测试数据
+# 格式：用例ID: {测试目的, 前置条件, 配置内容, 操作命令, 预期结果}
+
+server_name_001:
+  test_purpose: 验证基础功能-精确匹配server_name
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+    - hosts配置正确
+  config_content: |
+    server {
+      listen 80;
+      server_name exact.example.com;
+      location / {
+        return 200 "Exact Match";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl -H \"Host: exact.example.com\" http://localhost/"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "Exact Match"
+
+server_name_002:
+  test_purpose: 验证基础功能-通配符匹配server_name
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    server {
+      listen 80;
+      server_name *.example.com;
+      location / {
+        return 200 "Wildcard Match";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl -H \"Host: sub.example.com\" http://localhost/"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "Wildcard Match"
+
+server_name_003:
+  test_purpose: 验证基础功能-正则匹配server_name
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    server {
+      listen 80;
+      server_name ~^www\d+\.example\.com$;
+      location / {
+        return 200 "Regex Match";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl -H \"Host: www123.example.com\" http://localhost/"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "Regex Match"
+
+server_name_004:
+  test_purpose: 验证基础功能-多个server_name
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    server {
+      listen 80;
+      server_name example.com www.example.com alias.example.com;
+      location / {
+        return 200 "Multiple Names";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl -H \"Host: alias.example.com\" http://localhost/"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
+    - "Multiple Names"
+
+server_name_005:
+  test_purpose: 验证边界条件-空server_name
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    server {
+      listen 80;
+      server_name "";
+      location / {
+        return 200 "Empty Server Name";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+  expected_result:
+    - "configuration file"
+    - "test is successful"
