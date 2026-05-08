@@ -125,3 +125,31 @@ Before running tests, ensure `config/config.ini` has correct paths for your Ngin
 - `nginx_bin_path`: Path to nginx binary
 - `backup_path`: Where to store config backups
 - `error_log_path`: For troubleshooting failures
+
+If `config/config.ini` is not present or values are missing, the framework will use platform-specific defaults:
+
+| Platform | nginx_path | nginx_bin_path | backup_path |
+|----------|------------|----------------|-------------|
+| Windows | `D:\Tools\nginx-1.30.0\conf\nginx.conf` | `D:\Tools\nginx-1.30.0\nginx.exe` | `D:\Tools\nginx-1.30.0\backup\` |
+| macOS (Homebrew) | `/usr/local/etc/nginx/nginx.conf` | `/usr/local/bin/nginx` | `/usr/local/etc/nginx/backup/` |
+| Linux | `/etc/nginx/nginx.conf` | `/usr/sbin/nginx` | `/etc/nginx/backup/` |
+
+### Cross-Platform Compatibility
+
+The framework supports Windows, macOS, and Linux with the following considerations:
+
+1. **Paths**: Automatically adapted to platform-specific formats (backslashes on Windows, forward slashes on Unix)
+2. **Permissions**: Linux/macOS may require `sudo` for modifying system Nginx configs
+3. **Nginx Commands**: 
+   - Windows: Requires setting working directory to Nginx install path
+   - Linux/macOS: May need `sudo` for reload/restart operations
+4. **Process Management**: Uses `systemctl`/`service` on Linux, direct binary calls on macOS/Windows
+
+To check platform detection:
+```python
+from comms.platform_utils import get_platform, get_default_nginx_paths, check_nginx_installed
+
+print(get_platform())  # 'windows', 'linux', or 'darwin'
+print(get_default_nginx_paths())  # Platform-specific default paths
+print(check_nginx_installed())  # Check if nginx is available
+```

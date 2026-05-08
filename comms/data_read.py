@@ -6,6 +6,7 @@
 import os
 import yaml
 import configparser
+from .platform_utils import get_default_nginx_paths, get_platform
 
 
 def read_yaml(file_path):
@@ -45,6 +46,8 @@ def read_config(section, option, config_file='config/config.ini'):
     """
     读取config.ini配置文件中的配置项
 
+    支持跨平台：如果配置项不存在，则使用当前平台的默认值
+
     Args:
         section: 配置节名称（如 'nginx', 'test_env', 'report'）
         option: 配置项名称（如 'nginx_path', 'backup_path'）
@@ -56,7 +59,7 @@ def read_config(section, option, config_file='config/config.ini'):
     Raises:
         FileNotFoundError: 配置文件不存在
         configparser.NoSectionError: 配置节不存在
-        configparser.NoOptionError: 配置项不存在
+        configparser.NoOptionError: 配置项不存在（仅当没有平台默认值时）
     """
     # 如果传入的是相对路径，转换为绝对路径
     if not os.path.isabs(config_file):
@@ -68,6 +71,13 @@ def read_config(section, option, config_file='config/config.ini'):
 
     config = configparser.ConfigParser()
     config.read(config_file, encoding='utf-8')
+
+    # 如果是 nginx 相关配置，检查是否存在；如果不存在，使用平台默认值
+    if section == 'nginx' and option in get_default_nginx_paths():
+        if not config.has_section(section) or not config.has_option(section, option):
+            # 使用平台默认值
+            default_paths = get_default_nginx_paths()
+            return default_paths.get(option)
 
     if not config.has_section(section):
         raise configparser.NoSectionError(f"配置节不存在: {section}")

@@ -8,6 +8,14 @@ import shutil
 import time
 from .data_read import read_config
 from .cmd_operate import run_cmd, run_cmd_with_code
+from .platform_utils import (
+    get_platform,
+    is_windows,
+    is_linux,
+    is_macos,
+    get_nginx_restart_commands,
+    get_nginx_cwd,
+)
 
 
 # 全局变量，存储备份文件路径
@@ -31,10 +39,12 @@ def backup_nginx_config():
         nginx_path = read_config("nginx", "nginx_path")
         backup_dir = read_config("nginx", "backup_path")
     except Exception as e:
-        # 使用默认路径
-        nginx_path = "/etc/nginx/nginx.conf"
-        backup_dir = "./backup/"
-        print(f"警告: 读取配置失败，使用默认路径。错误: {str(e)}")
+        # 使用平台默认路径
+        from .platform_utils import get_default_nginx_paths
+        defaults = get_default_nginx_paths()
+        nginx_path = defaults['nginx_path']
+        backup_dir = defaults['backup_path']
+        print(f"警告: 读取配置失败，使用平台默认路径。错误: {str(e)}")
 
     # 确保Nginx配置文件存在
     if not os.path.exists(nginx_path):
@@ -74,7 +84,8 @@ def restore_nginx_config():
         try:
             backup_dir = read_config("nginx", "backup_path")
         except Exception:
-            backup_dir = "./backup/"
+            from .platform_utils import get_default_nginx_paths
+            backup_dir = get_default_nginx_paths()['backup_path']
 
         if os.path.exists(backup_dir):
             backup_files = [
@@ -94,7 +105,8 @@ def restore_nginx_config():
     try:
         nginx_path = read_config("nginx", "nginx_path")
     except Exception:
-        nginx_path = "/etc/nginx/nginx.conf"
+        from .platform_utils import get_default_nginx_paths
+        nginx_path = get_default_nginx_paths()['nginx_path']
 
     try:
         shutil.copy2(_backup_file_path, nginx_path)
@@ -119,13 +131,16 @@ def check_nginx_config():
         nginx_bin = read_config("nginx", "nginx_bin_path")
         nginx_path = read_config("nginx", "nginx_path")
     except Exception:
-        nginx_bin = "/usr/sbin/nginx"
-        nginx_path = "/etc/nginx/nginx.conf"
+        # 使用平台默认值
+        from .platform_utils import get_default_nginx_paths
+        defaults = get_default_nginx_paths()
+        nginx_bin = defaults['nginx_bin_path']
+        nginx_path = defaults['nginx_path']
 
-    # 获取Nginx安装目录作为工作目录
-    nginx_cwd = os.path.dirname(nginx_bin)
+    # 获取Nginx安装目录作为工作目录（Windows需要）
+    nginx_cwd = get_nginx_cwd(nginx_bin)
 
-    cmd = f'{nginx_bin} -t -c "{nginx_path}"'
+    cmd = f'"{nginx_bin}" -t -c "{nginx_path}"'
     returncode, output = run_cmd_with_code(cmd, cwd=nginx_cwd)
 
     return returncode == 0, output
@@ -140,16 +155,21 @@ def reload_nginx():
     """
     try:
         nginx_bin = read_config("nginx", "nginx_bin_path")
-        nginx_path = read_config("nginx", "nginx_path")
     except Exception:
-        nginx_bin = "/usr/sbin/nginx"
-        nginx_path = "/etc/nginx/nginx.conf"
+        # 使用平台默认值
+        from .platform_utils import get_default_nginx_paths
+        defaults = get_default_nginx_paths()
+        nginx_bin = defaults['nginx_bin_path']
 
-    # 获取Nginx安装目录作为工作目录
-    nginx_cwd = os.path.dirname(nginx_bin)
+    # 获取Nginx安装目录作为工作目录（Windows需要）
+    nginx_cwd = get_nginx_cwd(nginx_bin)
 
-    # nginx -s reload 不需要 -c 参数，它使用当前工作目录下的 conf/nginx.conf
-    cmd = f'{nginx_bin} -s reload'
+    # Linux/macOS 可能需要 sudo
+    if is_linux() or is_macos():
+        cmd = f'sudo "{nginx_bin}" -s reload'
+    else:
+        cmd = f'"{nginx_bin}" -s reload'
+
     returncode, output = run_cmd_with_code(cmd, cwd=nginx_cwd)
 
     return returncode == 0, output
@@ -165,18 +185,22 @@ def restart_nginx():
     Note:
         根据不同系统，使用不同的重启命令
     """
-    # 尝试多种重启方式
-    restart_cmds = [
-        "systemctl restart nginx",
-        "service nginx restart",
-        "/etc/init.d/nginx restart",
-    ]
+    # 获取平台特定的重启命令
+    restart_cmds = get_nginx_restart_commands()
 
     try:
         nginx_bin = read_config("nginx", "nginx_bin_path")
-        restart_cmds.append(f"{nginx_bin} -s stop && {nginx_bin}")
+        # Windows 下需要完整路径
+        if is_windows():
+            restart_cmds.append(f'"{nginx_bin}" -s stop && "{nginx_bin}"')
+        else:
+            # Linux/macOS 下可能需要 sudo
+            restart_cmds.append(f"sudo {nginx_bin} -s stop && sudo {nginx_bin}")
     except Exception:
-        restart_cmds.append("nginx -s stop && nginx")
+        if is_windows():
+            restart_cmds.append("nginx -s stop && nginx")
+        else:
+            restart_cmds.append("sudo nginx -s stop && sudo nginx")
 
     for cmd in restart_cmds:
         returncode, output = run_cmd_with_code(cmd, timeout=10)
@@ -487,7 +511,8 @@ def read_nginx_error_log(lines=10):
     try:
         error_log_path = read_config("nginx", "error_log_path")
     except Exception:
-        error_log_path = "/var/log/nginx/error.log"
+        from .platform_utils import get_default_nginx_paths
+        error_log_path = get_default_nginx_paths()['error_log_path']
 
     if not os.path.exists(error_log_path):
         return f"错误日志文件不存在: {error_log_path}"
@@ -516,9 +541,10 @@ def get_nginx_version():
     try:
         nginx_bin = read_config("nginx", "nginx_bin_path")
     except Exception:
-        nginx_bin = "/usr/sbin/nginx"
+        from .platform_utils import get_default_nginx_paths
+        nginx_bin = get_default_nginx_paths()['nginx_bin_path']
 
-    cmd = f"{nginx_bin} -v"
+    cmd = f'"{nginx_bin}" -v'
     try:
         return run_cmd(cmd)
     except Exception as e:
