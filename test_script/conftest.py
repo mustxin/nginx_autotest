@@ -4,13 +4,8 @@
 """
 
 import pytest
-from comms.constants import DATA_FILE, CONF_FILE
-from comms.data_read import read_yaml, read_config
 from comms.nginx_operate import (
-    add_nginx_config,
-    check_nginx_config,
     reload_nginx,
-    read_nginx_error_log,
     backup_nginx_config,
     restore_nginx_config,
 )

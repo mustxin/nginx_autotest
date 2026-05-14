@@ -1,12 +1,9 @@
 """
-===================================
-File Name: log_utils
-Author:    chenxin
-Date:      2022/5/30-10:55
-===================================
+日志工具模块
+统一日志输出到文件，不干扰终端显示
 """
 import logging
-from comms.constants import INFO_FILE, ERROR_FILE
+from comms.constants import LOG_DIR, INFO_FILE, ERROR_FILE
 
 _logger = None
 
@@ -16,10 +13,7 @@ def get_logger():
     if _logger is not None:
         return _logger
 
-    import os
-    log_dir = os.path.dirname(INFO_FILE)
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
 
     _logger = logging.getLogger("nginx_autotest")
     _logger.setLevel(logging.DEBUG)
