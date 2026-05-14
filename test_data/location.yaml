@@ -92,22 +92,156 @@ location_005:
     - "Prefix Priority Match"
 
 location_006:
-  test_purpose: 验证边界条件-嵌套location
+  test_purpose: 验证匹配优先级-精确匹配(=)优先于正则和前缀匹配
   pre_condition:
     - Nginx配置文件路径已知
     - 已备份原始配置文件
   config_content: |
-    location /api {
-      location /api/v1 {
-        return 200 "API V1";
+    server {
+      listen 18090;
+      server_name localhost;
+      location / {
+        return 200 "General Prefix Hit";
       }
-      return 200 "API Root";
+      location ~* ^/api {
+        return 200 "Regex Hit";
+      }
+      location = /api/exact {
+        return 200 "Exact Hit";
+      }
     }
   operate_commands:
     - "nginx -t"
     - "nginx -s reload"
-    - "curl http://localhost/api/v1"
+    - "curl http://localhost:18090/api/exact"
   expected_result:
-    - "configuration file"
     - "test is successful"
-    - "API V1"
+    - "Exact Hit"
+  unexpected_result:
+    - "Regex Hit"
+    - "General Prefix Hit"
+
+location_007:
+  test_purpose: 验证匹配优先级-^~前缀匹配优先于正则匹配
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    server {
+      listen 18090;
+      server_name localhost;
+      location / {
+        return 200 "General Prefix Hit";
+      }
+      location ~* \.html$ {
+        return 200 "Regex Hit";
+      }
+      location ^~ /static/ {
+        return 200 "Priority Prefix Hit";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl http://localhost:18090/static/page.html"
+  expected_result:
+    - "test is successful"
+    - "Priority Prefix Hit"
+  unexpected_result:
+    - "Regex Hit"
+    - "General Prefix Hit"
+
+location_008:
+  test_purpose: 验证匹配优先级-正则匹配优先于普通前缀匹配
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    server {
+      listen 18090;
+      server_name localhost;
+      location / {
+        return 200 "General Prefix Hit";
+      }
+      location /images/ {
+        return 200 "Prefix Hit";
+      }
+      location ~* \.(png|jpg|gif)$ {
+        return 200 "Regex Hit";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl http://localhost:18090/images/logo.png"
+  expected_result:
+    - "test is successful"
+    - "Regex Hit"
+  unexpected_result:
+    - "Prefix Hit"
+    - "General Prefix Hit"
+
+location_009:
+  test_purpose: 验证匹配优先级-普通前缀匹配优先于通用/匹配
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    server {
+      listen 18090;
+      server_name localhost;
+      location / {
+        return 200 "General Prefix Hit";
+      }
+      location /api/ {
+        return 200 "Prefix Hit";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl http://localhost:18090/api/users"
+  expected_result:
+    - "test is successful"
+    - "Prefix Hit"
+  unexpected_result:
+    - "General Prefix Hit"
+
+location_010:
+  test_purpose: 验证匹配优先级-全部共存时完整优先级链(= > ^~ > 正则 > 普通前缀 > /)
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+  config_content: |
+    server {
+      listen 18090;
+      server_name localhost;
+      location / {
+        return 200 "General Prefix Hit";
+      }
+      location /app {
+        return 200 "Prefix Hit";
+      }
+      location ~* ^/app {
+        return 200 "Regex Hit";
+      }
+      location ^~ /app/static {
+        return 200 "Priority Prefix Hit";
+      }
+      location = /app/static/main.js {
+        return 200 "Exact Hit";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+    - "curl http://localhost:18090/app/static/main.js"
+    - "curl http://localhost:18090/app/static/other.js"
+    - "curl http://localhost:18090/app/page"
+    - "curl http://localhost:18090/other"
+  expected_result:
+    - "test is successful"
+    - "Exact Hit"
+    - "Priority Prefix Hit"
+    - "Regex Hit"
+    - "General Prefix Hit"

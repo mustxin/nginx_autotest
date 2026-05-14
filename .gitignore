@@ -4,3 +4,4 @@ reports/
 backup/
 logs/
 .claude
+server.pid

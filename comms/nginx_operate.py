@@ -16,6 +16,7 @@ from .platform_utils import (
     get_nginx_restart_commands,
     get_nginx_cwd,
 )
+from .log_utils import logger
 
 
 # 全局变量，存储备份文件路径
@@ -44,7 +45,7 @@ def backup_nginx_config():
         defaults = get_default_nginx_paths()
         nginx_path = defaults['nginx_path']
         backup_dir = defaults['backup_path']
-        print(f"警告: 读取配置失败，使用平台默认路径。错误: {str(e)}")
+        logger.warning(f"读取配置失败，使用平台默认路径。错误: {str(e)}")
 
     # 确保Nginx配置文件存在
     if not os.path.exists(nginx_path):
@@ -61,7 +62,7 @@ def backup_nginx_config():
 
     try:
         shutil.copy2(nginx_path, _backup_file_path)
-        print(f"[OK] Nginx配置已备份至: {_backup_file_path}")
+        logger.info(f"Nginx配置已备份至: {_backup_file_path}")
         return _backup_file_path
     except Exception as e:
         raise Exception(f"备份Nginx配置失败: {str(e)}")
@@ -99,7 +100,7 @@ def restore_nginx_config():
                 _backup_file_path = os.path.join(backup_dir, backup_files[0])
 
     if _backup_file_path is None or not os.path.exists(_backup_file_path):
-        print("警告: 未找到备份文件，无法恢复Nginx配置")
+        logger.warning("未找到备份文件，无法恢复Nginx配置")
         return False
 
     try:
@@ -110,7 +111,7 @@ def restore_nginx_config():
 
     try:
         shutil.copy2(_backup_file_path, nginx_path)
-        print(f"[OK] Nginx配置已从 {_backup_file_path} 恢复")
+        logger.info(f"Nginx配置已从 {_backup_file_path} 恢复")
 
         # 恢复后重新加载Nginx
         reload_nginx()
@@ -171,6 +172,9 @@ def reload_nginx():
         cmd = f'"{nginx_bin}" -s reload'
 
     returncode, output = run_cmd_with_code(cmd, cwd=nginx_cwd)
+
+    if returncode == 0:
+        time.sleep(0.5)
 
     return returncode == 0, output
 
@@ -283,9 +287,8 @@ def _remove_test_config(content):
         str: 移除测试配置后的内容
     """
     import re
-    # 匹配测试配置块并移除
-    pattern = r'\n?\s*# ===== 自动化测试临时配置 =====\n.*?# ===== 自动化测试临时配置结束 =====\n?'
-    return re.sub(pattern, '', content, flags=re.DOTALL)
+    pattern = r'\n?[^\S\n]*# ===== 自动化测试临时配置 =====\n.*?# ===== 自动化测试临时配置结束 =====\n?'
+    return re.sub(pattern, '\n', content, flags=re.DOTALL)
 
 
 def add_nginx_config(nginx_path, config_content):
@@ -385,7 +388,7 @@ def add_nginx_config(nginx_path, config_content):
             import time
             time.sleep(0.1)
 
-        print(f"[OK] 测试配置已添加至: {nginx_path}")
+        logger.info(f"测试配置已添加至: {nginx_path}")
         return True
 
     except Exception as e:

@@ -1,71 +1,170 @@
 # grpc_set_header模块测试数据
 # 格式：用例ID: {测试目的, 前置条件, 配置内容, 操作命令, 预期结果}
+# 功能验证用例通过 grpc_verify 字段指定 gRPC 客户端验证参数
 
 grpc_set_header_001:
-  test_purpose: 验证基础功能-gRPC添加自定义请求头
+  test_purpose: 验证基础功能-gRPC添加自定义请求头并传递到后端
   pre_condition:
     - Nginx配置文件路径已知
     - 已备份原始配置文件
-    - Nginx支持gRPC模块
+    - Nginx支持gRPC模块(http_v2_module)
+    - gRPC mock server已启动
   config_content: |
-    location /grpc_test_add {
-      grpc_pass grpc://127.0.0.1:8080;
-      grpc_set_header X-Grpc-Test "grpc_value";
+    server {
+      listen 19080;
+      http2 on;
+      server_name localhost;
+      location / {
+        grpc_pass grpc://127.0.0.1:19090;
+        grpc_set_header X-Grpc-Test "grpc_value";
+      }
     }
   operate_commands:
     - "nginx -t"
     - "nginx -s reload"
   expected_result:
-    - "configuration file"
     - "test is successful"
+  grpc_verify:
+    target: "127.0.0.1:19080"
+    message: "test_add_header"
+    expect_metadata:
+      x-grpc-test: "grpc_value"
 
 grpc_set_header_002:
-  test_purpose: 验证基础功能-gRPC修改Host请求头
+  test_purpose: 验证基础功能-gRPC覆盖客户端发送的请求头
   pre_condition:
     - Nginx配置文件路径已知
     - 已备份原始配置文件
-    - Nginx支持gRPC模块
+    - Nginx支持gRPC模块(http_v2_module)
+    - gRPC mock server已启动
   config_content: |
-    location /grpc_test_host {
-      grpc_pass grpc://127.0.0.1:8080;
-      grpc_set_header Host "grpc.host.com";
+    server {
+      listen 19080;
+      http2 on;
+      server_name localhost;
+      location / {
+        grpc_pass grpc://127.0.0.1:19090;
+        grpc_set_header X-Client-Id "overridden_by_nginx";
+      }
     }
   operate_commands:
     - "nginx -t"
     - "nginx -s reload"
   expected_result:
-    - "configuration file"
     - "test is successful"
+  grpc_verify:
+    target: "127.0.0.1:19080"
+    message: "test_override_header"
+    client_metadata:
+      x-client-id: "original_value"
+    expect_metadata:
+      x-client-id: "overridden_by_nginx"
 
 grpc_set_header_003:
-  test_purpose: 验证基础功能-gRPC使用变量设置请求头
+  test_purpose: 验证基础功能-gRPC删除请求头(设置为空值)
   pre_condition:
     - Nginx配置文件路径已知
     - 已备份原始配置文件
-    - Nginx支持gRPC模块
+    - Nginx支持gRPC模块(http_v2_module)
+    - gRPC mock server已启动
   config_content: |
-    location /grpc_test_variable {
-      grpc_pass grpc://127.0.0.1:8080;
-      grpc_set_header X-Real-IP $remote_addr;
-      grpc_set_header X-Request-ID $request_id;
+    server {
+      listen 19080;
+      http2 on;
+      server_name localhost;
+      location / {
+        grpc_pass grpc://127.0.0.1:19090;
+        grpc_set_header X-Grpc-Test "";
+      }
     }
   operate_commands:
     - "nginx -t"
     - "nginx -s reload"
   expected_result:
-    - "configuration file"
     - "test is successful"
+  grpc_verify:
+    target: "127.0.0.1:19080"
+    message: "test_delete_header"
+    unexpected_metadata:
+      - "x-grpc-test"
 
 grpc_set_header_004:
-  test_purpose: 验证边界条件-gRPC空值请求头
+  test_purpose: 验证基础功能-gRPC同时设置多个自定义请求头
   pre_condition:
     - Nginx配置文件路径已知
     - 已备份原始配置文件
-    - Nginx支持gRPC模块
+    - Nginx支持gRPC模块(http_v2_module)
+    - gRPC mock server已启动
   config_content: |
-    location /grpc_test_empty {
-      grpc_pass grpc://127.0.0.1:8080;
-      grpc_set_header X-Empty-Grpc "";
+    server {
+      listen 19080;
+      http2 on;
+      server_name localhost;
+      location / {
+        grpc_pass grpc://127.0.0.1:19090;
+        grpc_set_header X-Header-A "value_a";
+        grpc_set_header X-Header-B "value_b";
+        grpc_set_header X-Header-C "value_c";
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+  expected_result:
+    - "test is successful"
+  grpc_verify:
+    target: "127.0.0.1:19080"
+    message: "test_multi_headers"
+    expect_metadata:
+      x-header-a: "value_a"
+      x-header-b: "value_b"
+      x-header-c: "value_c"
+
+grpc_set_header_005:
+  test_purpose: 验证基础功能-gRPC使用Nginx变量设置请求头
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+    - Nginx支持gRPC模块(http_v2_module)
+    - gRPC mock server已启动
+  config_content: |
+    server {
+      listen 19080;
+      http2 on;
+      server_name localhost;
+      location / {
+        grpc_pass grpc://127.0.0.1:19090;
+        grpc_set_header X-Real-IP $remote_addr;
+        grpc_set_header X-Server-Port $server_port;
+      }
+    }
+  operate_commands:
+    - "nginx -t"
+    - "nginx -s reload"
+  expected_result:
+    - "test is successful"
+  grpc_verify:
+    target: "127.0.0.1:19080"
+    message: "test_nginx_variables"
+    expect_metadata:
+      x-real-ip: "127.0.0.1"
+      x-server-port: "19080"
+
+grpc_set_header_006:
+  test_purpose: 验证语法检查-grpc_set_header配置语法正确性
+  pre_condition:
+    - Nginx配置文件路径已知
+    - 已备份原始配置文件
+    - Nginx支持gRPC模块(http_v2_module)
+  config_content: |
+    server {
+      listen 19080;
+      http2 on;
+      server_name localhost;
+      location / {
+        grpc_pass grpc://127.0.0.1:19090;
+        grpc_set_header X-Test "syntax_check";
+      }
     }
   operate_commands:
     - "nginx -t"

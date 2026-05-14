@@ -69,7 +69,7 @@ def main():
 
     print("-" * 60)
     if exit_code == 0:
-        print("[OK] 所有测试用例执行通过！")
+        print("所有测试用例执行通过！")
     elif exit_code == 1:
         print("[FAIL] 部分测试用例执行失败！")
     elif exit_code == 2:
@@ -84,7 +84,7 @@ def main():
         print(f"⚠️ 测试执行完成，退出码: {exit_code}")
 
     print("=" * 60)
-    print(f"=== 测试执行完成！测试报告已生成：{full_report_path} ===")
+    print(f"测试执行完成！测试报告已生成：{full_report_path}")
     print("=" * 60)
     print("提示：")
     print("  1. 打开HTML报告，可查看详细执行结果（通过/失败/错误）")
