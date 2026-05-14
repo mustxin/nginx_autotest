@@ -4,12 +4,13 @@
 [![pytest](https://img.shields.io/badge/pytest-7.0+-blue.svg)](https://pytest.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-一款基于 Python + pytest 的 Nginx 白盒测试自动化框架，采用数据与脚本分离的设计理念，支持跨平台运行（Windows/macOS/Linux）。
+一款基于 Python + pytest 的 Nginx 白盒测试自动化框架，采用数据与脚本分离的设计理念。
+
+> **注意：当前框架仅支持 Windows 平台。** macOS / Linux 等其他操作系统需要另外单独适配。
 
 ## 特性
 
 - **数据-脚本分离**：测试用例使用 YAML 定义，测试逻辑使用 Python 实现
-- **跨平台支持**：自动适配 Windows、macOS、Linux 系统
 - **配置智能注入**：自动将测试配置注入 Nginx 配置文件，支持 server 块和 location 块的智能插入
 - **测试隔离**：每个测试模块自动备份和恢复 Nginx 配置
 - **gRPC 端到端测试**：内置 gRPC mock 服务器，支持 grpc_set_header 等指令的功能验证
@@ -26,8 +27,7 @@ nginx_autotest/
 │   ├── data_read.py         # YAML/INI 配置读取
 │   ├── grpc_helper.py       # gRPC 服务启停与客户端调用
 │   ├── log_utils.py         # 日志模块（文件输出）
-│   ├── nginx_operate.py     # Nginx 操作（备份/恢复/重载/配置注入）
-│   └── platform_utils.py    # 跨平台工具
+│   └── nginx_operate.py     # Nginx 操作（备份/恢复/重载/配置注入）
 ├── config/
 │   └── config.ini           # Nginx 路径配置
 ├── grpc_mock/               # gRPC Mock 服务
@@ -77,9 +77,8 @@ pip install pytest pyyaml grpcio grpcio-tools
 
 ### 配置 Nginx 路径
 
-编辑 `config/config.ini`，根据你的系统配置 Nginx 路径：
+编辑 `config/config.ini`，配置 Nginx 路径：
 
-**Windows:**
 ```ini
 [nginx]
 nginx_path = D:\Tools\nginx-1.30.0\conf\nginx.conf
@@ -87,26 +86,6 @@ nginx_bin_path = D:\Tools\nginx-1.30.0\nginx.exe
 backup_path = D:\Tools\nginx-1.30.0\backup\
 error_log_path = D:\Tools\nginx-1.30.0\logs\error.log
 ```
-
-**macOS (Homebrew):**
-```ini
-[nginx]
-nginx_path = /usr/local/etc/nginx/nginx.conf
-nginx_bin_path = /usr/local/bin/nginx
-backup_path = /usr/local/etc/nginx/backup/
-error_log_path = /usr/local/var/log/nginx/error.log
-```
-
-**Linux:**
-```ini
-[nginx]
-nginx_path = /etc/nginx/nginx.conf
-nginx_bin_path = /usr/sbin/nginx
-backup_path = /etc/nginx/backup/
-error_log_path = /var/log/nginx/error.log
-```
-
-> 提示：如果 `config/config.ini` 不存在或配置项缺失，框架会自动使用平台默认值。
 
 ### 运行测试
 
@@ -190,24 +169,6 @@ grpc_set_header_001:
 2026-05-14 23:25:06,959 - [test_add_header.py - 93] - INFO:[add_header_001] 验证基础功能-添加自定义响应头 执行成功！
 ```
 
-## 跨平台兼容性
-
-框架自动检测操作系统并适配相应配置：
-
-| 功能 | Windows | macOS | Linux |
-|------|---------|-------|-------|
-| 路径分隔符 | `\` | `/` | `/` |
-| Nginx 工作目录 | 需要设置 | 可选 | 可选 |
-| 权限要求 | 无 | 可能需要 sudo | 需要 sudo |
-| 重启命令 | nginx -s reload | sudo nginx -s reload | sudo systemctl restart nginx |
-
-```python
-from comms.platform_utils import get_platform, check_nginx_installed
-
-print(get_platform())          # 'windows', 'linux', 或 'darwin'
-print(check_nginx_installed()) # (True/False, 版本信息)
-```
-
 ## 添加新测试模块
 
 1. 在 `test_data/` 目录创建 YAML 测试数据文件
@@ -218,11 +179,11 @@ print(check_nginx_installed()) # (True/False, 版本信息)
 
 ## 注意事项
 
-1. **权限问题**：Linux/macOS 下修改系统 Nginx 配置可能需要 `sudo` 权限
-2. **端口冲突**：确保测试使用的端口（80、18090、19080、19090）未被占用
-3. **配置备份**：框架会自动备份和恢复 Nginx 配置，但建议手动备份重要配置
-4. **Nginx 版本**：推荐 1.25.1+，HTTP/2 需使用 `http2 on;` 指令而非 `listen ... http2`
-5. **日志查看**：测试运行后查看 `logs/info.log` 获取详细执行日志
+1. **端口冲突**：确保测试使用的端口（80、18090、19080、19090）未被占用
+2. **配置备份**：框架会自动备份和恢复 Nginx 配置，但建议手动备份重要配置
+3. **Nginx 版本**：推荐 1.25.1+，HTTP/2 需使用 `http2 on;` 指令而非 `listen ... http2`
+4. **日志查看**：测试运行后查看 `logs/info.log` 获取详细执行日志
+5. **仅限 Windows**：当前框架仅支持 Windows，macOS / Linux 需另外适配
 
 ## 许可证
 

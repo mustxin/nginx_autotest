@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **Nginx White-box Testing Automation Framework** (Nginx白盒测试自动化框架) that follows a data-script separation design. Test cases are defined in YAML files while test scripts handle execution logic only. Currently has **29 test cases** across 7 modules.
 
+> **Platform: Windows only.** macOS / Linux are not supported and require separate adaptation work.
+
 ## Common Commands
 
 ### Run Tests
@@ -45,7 +47,6 @@ The framework strictly separates test data from execution logic:
 - `data_read.py`: YAML and INI config file parsers
 - `constants.py`: Path constants and path helper functions
 - `log_utils.py`: Logging singleton — writes to `logs/info.log` and `logs/error.log`, no console output
-- `platform_utils.py`: Cross-platform detection and Nginx path defaults
 - `grpc_helper.py`: gRPC mock server lifecycle and client call helper for end-to-end gRPC tests
 
 **`grpc_mock/` - gRPC Mock Server**
@@ -58,7 +59,7 @@ The framework strictly separates test data from execution logic:
 - Module-scoped fixture: restores Nginx config between test modules to ensure isolation
 
 **`config/config.ini`**
-- Central configuration for Nginx paths, ports, and report settings. Falls back to platform defaults if missing.
+- Central configuration for Nginx paths, ports, and report settings. All values must be present — no automatic fallback.
 
 ### Test Data Format
 
@@ -155,35 +156,25 @@ The `_remove_test_config()` function cleans up previous test configs before inje
 
 ### Configuration Requirements
 
-Before running tests, ensure `config/config.ini` has correct paths for your Nginx installation:
+Before running tests, ensure `config/config.ini` has correct paths for your Windows Nginx installation:
 - `nginx_path`: Path to nginx.conf
 - `nginx_bin_path`: Path to nginx binary
 - `backup_path`: Where to store config backups
 - `error_log_path`: For troubleshooting failures
 
-If `config/config.ini` is not present or values are missing, the framework will use platform-specific defaults:
-
-| Platform | nginx_path | nginx_bin_path | backup_path |
-|----------|------------|----------------|-------------|
-| Windows | `D:\Tools\nginx-1.30.0\conf\nginx.conf` | `D:\Tools\nginx-1.30.0\nginx.exe` | `D:\Tools\nginx-1.30.0\backup\` |
-| macOS (Homebrew) | `/usr/local/etc/nginx/nginx.conf` | `/usr/local/bin/nginx` | `/usr/local/etc/nginx/backup/` |
-| Linux | `/etc/nginx/nginx.conf` | `/usr/sbin/nginx` | `/etc/nginx/backup/` |
-
-### Cross-Platform Compatibility
-
-The framework supports Windows, macOS, and Linux with the following considerations:
-
-1. **Paths**: Automatically adapted to platform-specific formats
-2. **Permissions**: Linux/macOS may require `sudo` for modifying system Nginx configs
-3. **Nginx Commands**:
-   - Windows: Requires setting working directory to Nginx install path
-   - Linux/macOS: May need `sudo` for reload/restart operations
-4. **Process Management**: Uses `systemctl`/`service` on Linux, direct binary calls on macOS/Windows
-5. **gRPC**: Server binds to `0.0.0.0` (not `[::]`) for Windows IPv4 compatibility
-6. **HTTP/2**: Uses `http2 on;` directive (not deprecated `listen ... http2` syntax for Nginx 1.25.1+)
+Default Windows configuration example:
+```ini
+[nginx]
+nginx_path = D:\Tools\nginx-1.30.0\conf\nginx.conf
+nginx_bin_path = D:\Tools\nginx-1.30.0\nginx.exe
+backup_path = D:\Tools\nginx-1.30.0\backup\
+error_log_path = D:\Tools\nginx-1.30.0\logs\error.log
+```
 
 ### Known Constraints
 
 - `listen ... http2` is deprecated since Nginx 1.25.1 — use `http2 on;` instead
-- Windows may have Nginx reload timing issues — the framework adds `time.sleep(0.5)` after reload
+- Windows Nginx may have reload timing issues — the framework adds `time.sleep(0.5)` after reload
+- Nginx commands require setting the working directory to the Nginx install path
+- gRPC mock server binds to `0.0.0.0` (not `[::]`) for IPv4 compatibility
 - The `_remove_test_config` regex uses `[^\S\n]*` (not `\s*`) to avoid consuming newlines that break brace matching
